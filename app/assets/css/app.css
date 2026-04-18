@@ -1,0 +1,29 @@
+/* Mengimpor core dan utility Tailwind v4 */
+@import "tailwindcss";
+
+/* Mendefinisikan Custom Theme sesuai Design System */
+@theme {
+  /* Nuxt Green - Primary Actions */
+  --color-primary: #00dc82;
+  --color-primary-hover: #00c574; /* Sedikit lebih gelap untuk hover state */
+
+  /* Dark Mode Backgrounds */
+  --color-dark-bg: #020420; /* Nuxt Vulcan */
+  --color-dark-surface: #0f172a; /* Slate 900 */
+
+  /* Light Mode Backgrounds */
+  --color-light-surface: #f8fafc; /* Slate 50 */
+}
+
+/* Konfigurasi Base untuk mendukung Light/Dark Mode Native */
+@layer base {
+  :root {
+    background-color: var(--color-light-surface);
+    color: var(--color-dark-surface);
+  }
+
+  .dark {
+    background-color: var(--color-dark-bg);
+    color: var(--color-light-surface);
+  }
+}
