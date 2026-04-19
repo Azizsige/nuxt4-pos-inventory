@@ -1,6 +1,8 @@
 /* Mengimpor core dan utility Tailwind v4 */
 @import "tailwindcss";
 
+@import "@nuxt/ui";
+
 /* Mendefinisikan Custom Theme sesuai Design System */
 @theme {
   /* Nuxt Green - Primary Actions */
