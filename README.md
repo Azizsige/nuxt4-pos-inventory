@@ -4,13 +4,14 @@
   - [x] Inisialisasi Nuxt 4 & aktivasi struktur `app/`
   - [x] Integrasi Tailwind v4 via Vite `@theme`
   - [x] Setup Design System (Nuxt Official Palette: Green, Vulcan, Slate)
-  - [x] Instalasi Module (Nuxt UI v3, Pinia, Supabase, VueUse)
+  - [x] Instalasi Module (Nuxt UI v3/v4, Pinia, Supabase, VueUse)
   - [x] Patch keamanan (Migrasi dari SheetJS/xlsx ke ExcelJS)
 
-- [ ] **Step 2: Setup Database (Supabase) & Authentication**
-  - [ ] SQL Schema Definition (`users`, `products`, `variants`, `transactions`, `transaction_items`, `inventory_logs` dengan FK)
-  - [ ] Setup Supabase Auth (Email/Password) di Dashboard
-  - [ ] Role-Based Middleware (`app/middleware/auth.ts` untuk proteksi role admin/gudang/kasir)
+- [x] **Step 2: Setup Database (Supabase) & Authentication**
+  - [x] SQL Schema Definition (`users`, `products`, `variants`, `transactions`, `transaction_items`, `inventory_logs` dengan FK)
+  - [x] Setup Supabase Auth (Email/Password) di Dashboard
+  - [x] Role-Based Middleware (`app/middleware/auth.ts` untuk proteksi role admin/gudang/kasir)
+  - [x] Halaman Login & Unauthorized handling
 
 - [ ] **Step 3: Base Layouting & Routing**
   - [ ] Setup layout Admin (Sidebar & Header)
