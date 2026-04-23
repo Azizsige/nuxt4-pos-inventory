@@ -1,56 +1,40 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  // INI DIA PENANGKAL RACUNNYA!
-  // Suruh Server Nuxt diem, biar Browser aja yang jadi Satpamnya.
-  if (import.meta.server) return;
-
   const user = useSupabaseUser();
-  const supabase = useSupabaseClient();
+  const supabase = useSupabaseClient(); // Panggil mesin database
 
-  // 1. GUEST GUARD: Kalau udah login, haram hukumnya balik ke /login
-  if (user.value && to.path === "/login") {
-    return navigateTo("/", { replace: true });
-  }
-
-  // 2. AUTH GUARD: Kalau belum login, haram masuk ke halaman dalam
   if (!user.value && to.path !== "/login") {
-    return navigateTo("/login", { replace: true });
+    return navigateTo("/login");
   }
 
-  // JURUS PENANGKAP ID
-  const userId = user.value?.id || user.value?.sub;
-
-  if (userId && to.path !== "/login") {
-    const { data: userData, error } = await supabase
+  if (user.value) {
+    // 💡 MAGIC NYA DI SINI: Kita tarik role langsung dari tabel yang lu edit!
+    const { data } = await supabase
       .from("users")
       .select("role")
-      .eq("id", userId)
+      .eq("id", user.value.sub)
       .single();
 
-    if (error || !userData) {
-      if (to.path !== "/unauthorized")
-        return navigateTo("/unauthorized", { replace: true });
-      return;
+    console.log("Role user:", data.role); // Cek role yang didapat
+    console.log("Role user:", user.value); // Cek role yang didapat
+    const role = data?.role || "kasir";
+    console.log("RoleN user:", role);
+
+    // Kalau maksa buka halaman login padahal udah login
+    if (to.path === "/login") {
+      if (role === "admin") return navigateTo("/admin");
+      if (role === "gudang") return navigateTo("/gudang");
+      return navigateTo("/kasir");
     }
 
-    const userRole = userData.role;
-
-    // 3. ROLE GUARD: Cek izin kamar masing-masing
-    if (to.path.startsWith("/admin") && userRole !== "admin") {
-      return navigateTo("/unauthorized", { replace: true });
+    // ATURAN HAK AKSES
+    if (to.path.startsWith("/admin") && role !== "admin") {
+      return navigateTo("/kasir");
     }
-
-    if (
-      to.path.startsWith("/gudang") &&
-      !["admin", "gudang"].includes(userRole as string)
-    ) {
-      return navigateTo("/unauthorized", { replace: true });
+    if (to.path.startsWith("/gudang") && role === "kasir") {
+      return navigateTo("/kasir");
     }
-
-    if (
-      to.path.startsWith("/kasir") &&
-      !["admin", "kasir"].includes(userRole as string)
-    ) {
-      return navigateTo("/unauthorized", { replace: true });
+    if (to.path.startsWith("/kasir") && role === "gudang") {
+      return navigateTo("/gudang");
     }
   }
 });

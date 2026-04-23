@@ -75,15 +75,6 @@ definePageMeta({
 const supabase = useSupabaseClient();
 const user = useSupabaseUser();
 
-// 👇 CCTV PENJAGA TAMU (GUEST GUARD) 👇
-// Ini bakal jalan di browser. Kalau lu iseng buka /login padahal udah punya tiket,
-// dia bakal langsung nendang lu balik ke dashboard tanpa ampun!
-watchEffect(() => {
-  if (user.value) {
-    navigateTo("/", { replace: true });
-  }
-});
-
 const loading = ref(false);
 const isSuccess = ref(false);
 

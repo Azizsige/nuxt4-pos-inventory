@@ -24,6 +24,12 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
   },
 
+  runtimeConfig: {
+    public: {
+      whatsappNumber: "6281234567890", // Ganti pake nomor klien lu nanti
+    },
+  },
+
   // Konfigurasi devtools (opsional tapi disarankan)
   devtools: { enabled: true },
 });

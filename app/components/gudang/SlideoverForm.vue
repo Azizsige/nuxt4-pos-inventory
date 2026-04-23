@@ -10,6 +10,71 @@
   >
     <template #body>
       <form id="form-barang" @submit.prevent="submitForm" class="space-y-4">
+        <UFormField
+          label="Foto Produk"
+          name="image"
+          help="Format: JPG/PNG. Maks 2MB."
+        >
+          <div
+            v-if="imagePreviewUrl"
+            class="relative w-full h-48 rounded-xl overflow-hidden border-2 border-dashed border-primary/50 group bg-gray-50 dark:bg-gray-900 flex justify-center items-center"
+          >
+            <img
+              :src="imagePreviewUrl"
+              class="w-full h-full object-contain"
+              alt="Preview"
+            />
+            <div
+              class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"
+            >
+              <UButton
+                color="white"
+                variant="solid"
+                size="sm"
+                icon="i-heroicons-arrow-path"
+                class="cursor-pointer"
+                @click="() => fileInput?.click()"
+              >
+                Ganti Foto
+              </UButton>
+              <UButton
+                color="red"
+                variant="soft"
+                size="xs"
+                icon="i-heroicons-trash"
+                class="cursor-pointer"
+                @click="removeImage"
+              >
+                Hapus
+              </UButton>
+            </div>
+          </div>
+
+          <div
+            v-else
+            class="w-full h-48 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            @click="() => fileInput?.click()"
+          >
+            <UIcon
+              name="i-heroicons-photo"
+              class="w-10 h-10 text-gray-400 mb-2"
+            />
+            <span class="text-sm font-medium text-primary"
+              >Klik untuk memilih foto</span
+            >
+            <span class="text-xs text-gray-500 mt-1"
+              >SVG, PNG, JPG (Maks. 2MB)</span
+            >
+          </div>
+
+          <input
+            type="file"
+            ref="fileInput"
+            accept="image/png, image/jpeg, image/jpg"
+            class="hidden"
+            @change="handleFileChange"
+          />
+        </UFormField>
         <UFormField label="Nama Produk" name="name" required>
           <UInput
             v-model="state.name"
@@ -72,8 +137,9 @@
           variant="ghost"
           class="cursor-pointer"
           @click="isOpen = false"
-          >Batal</UButton
         >
+          Batal
+        </UButton>
 
         <UButton
           type="submit"
@@ -93,7 +159,6 @@
 const isOpen = defineModel<boolean>("open");
 const emit = defineEmits(["refresh"]);
 
-// Definisi Props untuk menerima mode dan data dari parent (index.vue)
 interface Props {
   mode?: "add" | "edit";
   initialData?: any;
@@ -103,12 +168,15 @@ const props = withDefaults(defineProps<Props>(), {
   initialData: null,
 });
 
-// Computed bantu biar if-else lebih rapi
 const isEdit = computed(() => props.mode === "edit");
 
 const supabase = useSupabaseClient();
 const toast = useToast();
 const isLoading = ref(false);
+
+// Ref buat ngambil elemen input file
+const fileInput = ref<HTMLInputElement | null>(null);
+const imagePreviewUrl = ref<string | null>(null); // State buat preview lokal
 
 const state = reactive({
   name: "",
@@ -116,9 +184,38 @@ const state = reactive({
   size: "",
   price: 0,
   stock: 0,
+  image_url: "",
 });
 
-// MAGIC-nya Vue: Pantau kalau slideover kebuka, langsung isi data (kalau mode edit)
+// FUNGSI HANDLE PREVIEW LOKAL
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  if (target.files && target.files[0]) {
+    const file = target.files[0];
+
+    // Validasi ukuran maks 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      toast.add({
+        title: "File Terlalu Besar",
+        description: "Ukuran foto maksimal adalah 2MB.",
+        color: "red",
+      });
+      target.value = ""; // Reset input
+      return;
+    }
+
+    // Bikin URL lokal sementara untuk preview
+    imagePreviewUrl.value = URL.createObjectURL(file);
+  }
+};
+
+// Fungsi menghapus gambar dari preview
+const removeImage = () => {
+  imagePreviewUrl.value = null;
+  state.image_url = ""; // Kosongkan state URL
+  if (fileInput.value) fileInput.value.value = ""; // Reset input HTML
+};
+
 watch(
   () => isOpen.value,
   (newVal) => {
@@ -129,17 +226,41 @@ watch(
         state.size = props.initialData.size;
         state.price = props.initialData.raw_price;
         state.stock = props.initialData.stock;
+        state.image_url = props.initialData.image_url || "";
+        imagePreviewUrl.value = props.initialData.image_url || null; // Set preview dengan URL Supabase
       } else {
-        // Kalau mode 'add', bersihin sisa isian sebelumnya
         state.name = "";
         state.category = "";
         state.size = "";
         state.price = 0;
         state.stock = 0;
+        state.image_url = "";
+        imagePreviewUrl.value = null;
+        if (fileInput.value) fileInput.value.value = "";
       }
     }
   },
 );
+
+// --- FUNGSI UPLOAD KE SUPABASE STORAGE ---
+const uploadImage = async (file: File) => {
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+  const { data, error } = await supabase.storage
+    .from("products") // Pastikan lu udah bikin bucket "products"
+    .upload(fileName, file);
+
+  if (error) {
+    console.error("Upload error:", error);
+    throw new Error("Gagal upload gambar");
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("products").getPublicUrl(fileName);
+  return publicUrl;
+};
 
 const submitForm = async () => {
   if (!state.name || !state.category || !state.size || state.price <= 0) {
@@ -154,16 +275,30 @@ const submitForm = async () => {
   isLoading.value = true;
 
   try {
+    // 1. Cek ada file baru yang mau diupload nggak?
+    if (fileInput.value && fileInput.value.files && fileInput.value.files[0]) {
+      state.image_url = await uploadImage(fileInput.value.files[0]);
+    }
+
     if (isEdit.value) {
       // --- LOGIC UPDATE (EDIT) ---
-      // 1. Update tabel products
+      const updatePayload: any = { name: state.name, category: state.category };
+
+      // Update image_url juga kalau ada foto baru atau fotonya dihapus
+      // Kalau user klik tombol "Hapus", state.image_url bakal jadi string kosong
+      if (state.image_url !== "") {
+        updatePayload.image_url = state.image_url;
+      } else if (imagePreviewUrl.value === null) {
+        // Artinya gambar sengaja dihapus
+        updatePayload.image_url = null;
+      }
+
       const { error: productError } = await supabase
         .from("products")
-        .update({ name: state.name, category: state.category })
+        .update(updatePayload)
         .eq("id", props.initialData.product_id);
       if (productError) throw productError;
 
-      // 2. Update tabel variants
       const { error: variantError } = await supabase
         .from("variants")
         .update({ size: state.size, price: state.price, stock: state.stock })
@@ -179,7 +314,13 @@ const submitForm = async () => {
       // --- LOGIC INSERT (TAMBAH) ---
       const { data: productData, error: productError } = await supabase
         .from("products")
-        .insert([{ name: state.name, category: state.category }])
+        .insert([
+          {
+            name: state.name,
+            category: state.category,
+            image_url: state.image_url || null, // Masukin URL foto
+          },
+        ])
         .select("id")
         .single();
       if (productError) throw productError;
@@ -207,7 +348,7 @@ const submitForm = async () => {
     console.error("Error proses data:", error.message);
     toast.add({
       title: "Error",
-      description: "Gagal memproses data ke database.",
+      description: error.message || "Gagal memproses data ke database.",
       color: "red",
     });
   } finally {
