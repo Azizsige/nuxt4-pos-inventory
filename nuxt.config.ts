@@ -26,7 +26,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      whatsappNumber: "6281234567890", // Ganti pake nomor klien lu nanti
+      whatsappNumber:
+        process.env.NUXT_PUBLIC_WHATSAPP_NUMBER || "6281234567890", // Ganti pake nomor klien lu nanti
     },
   },
 
