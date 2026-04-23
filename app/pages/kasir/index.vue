@@ -41,12 +41,12 @@
 
           <div
             v-else
-            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+            class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4 sm:gap-6 items-stretch"
           >
             <UCard
               v-for="variant in filteredProducts"
               :key="variant.id"
-              class="group cursor-pointer hover:ring-2 hover:ring-primary transition-all duration-200 shadow-sm rounded-xl overflow-hidden flex flex-col"
+              class="w-full h-full flex flex-col cursor-pointer transition-transform hover:scale-105 group cursor-pointer hover:ring-2 hover:ring-primary transition-all duration-200 shadow-sm rounded-xl overflow-hidden flex flex-col"
               :ui="{ body: { padding: 'p-0 sm:p-0' } }"
               @click="cart.addItem(variant)"
             >

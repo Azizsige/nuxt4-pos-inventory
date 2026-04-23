@@ -37,6 +37,23 @@
         :loading="pending"
         class="w-full"
       >
+        <template #image-cell="{ row }">
+          <div
+            class="flex items-center justify-center w-10 h-10 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          >
+            <img
+              v-if="row.original.image_url"
+              :src="row.original.image_url"
+              alt="Foto Produk"
+              class="object-cover w-full h-full"
+            />
+            <UIcon
+              v-else
+              name="i-heroicons-photo"
+              class="w-5 h-5 text-gray-400"
+            />
+          </div>
+        </template>
         <template #actions-cell="{ row }">
           <div class="flex gap-2">
             <UTooltip text="Edit Barang">
@@ -103,7 +120,8 @@ const selectedItemToForm = ref<any>(null); // Beda dengan selectedItem buat dele
 // 1. Definisi Tipe Data (Interface)
 interface Product {
   name: string;
-  category: string; // <- Tambahin ini
+  category: string;
+  image_url: string | null;
 }
 
 interface Variant {
@@ -121,6 +139,7 @@ const isSlideoverOpen = ref(false);
 
 // 3. Definisi Kolom UTable
 const columns = [
+  { accessorKey: "image", header: "Foto" },
   { accessorKey: "nama_produk", header: "Nama Produk" },
   { accessorKey: "size", header: "Ukuran" },
   { accessorKey: "price_format", header: "Harga" },
@@ -144,11 +163,13 @@ const { data: rawInventory, pending } = await useAsyncData<Variant[]>(
         stock,
         products (
           name,
-          category
+          category,
+          image_url
         )
       `,
       )
-      .order("stock", { ascending: true });
+      .order("stock", { ascending: true }) // Aturan 1: Urutkan dari stok terkecil (biar gampang lihat yg mau habis)
+      .order("id", { ascending: true });
 
     if (error) {
       console.error("Gagal menarik data:", error.message);
@@ -164,12 +185,15 @@ const refreshData = () => {
 };
 
 // 5. Mapping Data biar rapi
+// 5. Mapping Data biar rapi
 const formattedInventory = computed(() => {
   if (!rawInventory.value) return [];
 
   return rawInventory.value.map((item) => ({
     id: item.id,
     product_id: item.product_id,
+    // Kita simpan URL gambar di root object biar gampang diakses UTable
+    image_url: item.products?.image_url || null,
     nama_produk: item.products?.name || "Produk Tidak Diketahui",
     category: item.products?.category || "",
     size: item.size || "-",
@@ -177,7 +201,6 @@ const formattedInventory = computed(() => {
       ? `Rp ${item.price.toLocaleString("id-ID")}`
       : "Rp 0",
     stock: item.stock || 0,
-    // Kita simpan raw price juga, siapa tau nanti butuh buat edit
     raw_price: item.price,
   }));
 });
@@ -223,7 +246,15 @@ const executeDelete = async () => {
       .delete()
       .eq("id", selectedItem.value.id);
 
-    if (error) throw error;
+    // TANGKAP ERROR FOREIGN KEY DI SINI
+    if (error) {
+      if (error.code === "23503") {
+        throw new Error(
+          "Barang ini tidak bisa dihapus karena sudah ada riwayat transaksinya di Kasir (Laporan bisa rusak). Saran: Edit barang dan ubah stoknya menjadi 0.",
+        );
+      }
+      throw error; // Lempar error lain kalau bukan 23503
+    }
 
     toast.add({
       title: "Berhasil",
@@ -238,12 +269,14 @@ const executeDelete = async () => {
   } catch (error: any) {
     console.error("Gagal hapus data:", error.message);
     toast.add({
-      title: "Error",
-      description: "Gagal menghapus data dari database.",
+      title: "Ditolak Sistem 🛑",
+      description: error.message || "Gagal menghapus data dari database.",
       color: "red",
+      timeout: 6000, // Biar notifnya agak lama dikit biar bisa dibaca
     });
   } finally {
     isDeleting.value = false;
+    isConfirmOpen.value = false; // Pastikan modal tertutup meski error
   }
 };
 </script>
