@@ -53,9 +53,16 @@
               <div
                 class="h-24 sm:h-32 bg-gray-200 dark:bg-gray-800 flex flex-col items-center justify-center relative"
               >
+                <img
+                  v-if="variant.products?.image_url"
+                  :src="variant.products.image_url"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-in-out"
+                  alt="Foto Produk"
+                />
                 <UIcon
-                  name="i-heroicons-cube-transparent"
-                  class="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-600 mb-1"
+                  v-else
+                  name="i-heroicons-photo"
+                  class="w-16 h-16 text-gray-300"
                 />
                 <UBadge
                   color="primary"
@@ -336,7 +343,7 @@ const { data: rawProducts, pending } = await useAsyncData(
       .select(
         `
         id, size, price, stock,
-        products ( name, category )
+        products ( name, category, image_url )
       `,
       )
       .gt("stock", 0)
